@@ -93,6 +93,12 @@ async def query(request: QueryRequest):
     return result
 
 
+@app.get("/")
+async def root():
+    """Root endpoint for platform probes."""
+    return {"status": "ok", "service": "sap-o2c-api"}
+
+
 @app.get("/api/health")
 async def health():
     try:
