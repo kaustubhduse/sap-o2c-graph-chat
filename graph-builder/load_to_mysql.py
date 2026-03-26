@@ -31,7 +31,13 @@ load_dotenv(O2C_BACKEND_DIR / ".env")
 load_dotenv(GRAPH_BUILDER_DIR / ".env")
 
 sys.path.insert(0, str(NL_TO_SQL_DIR))
-from db import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER  # noqa: E402
+from db import (  # noqa: E402
+    DB_HOST,
+    DB_NAME,
+    DB_PORT,
+    get_server_sqlalchemy_uri,
+    get_sqlalchemy_uri,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,8 +58,7 @@ def main():
     logger.info(f"Connecting to MySQL at {DB_HOST}:{DB_PORT}...")
     
     # Connect without database first to create it
-    server_uri = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}"
-    server_engine = create_engine(server_uri)
+    server_engine = create_engine(get_server_sqlalchemy_uri())
     
     with server_engine.connect() as conn:
         # Use backticks for database name with hyphens
@@ -64,8 +69,7 @@ def main():
     server_engine.dispose()
 
     # Step 2: Connect to the target database
-    db_uri = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    engine = create_engine(db_uri)
+    engine = create_engine(get_sqlalchemy_uri())
 
     # Step 3: Load each CSV into a table
     csv_files = sorted(ENTITIES_DIR.glob("*.csv"))

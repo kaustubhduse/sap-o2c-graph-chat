@@ -5,4 +5,5 @@ langchain>=0.3
 langchain-groq
 langchain-community
 pymysql
+cryptography
 sqlalchemy
