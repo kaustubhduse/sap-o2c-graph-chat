@@ -8,7 +8,7 @@ Scheme mysql:// is normalized to mysql+pymysql:// for SQLAlchemy.
 """
 import os
 import logging
-from urllib.parse import urlparse, urlunparse, unquote
+from urllib.parse import urlparse, urlunparse, unquote, parse_qsl, urlencode
 
 from dotenv import load_dotenv
 from langchain_community.utilities import SQLDatabase
@@ -25,6 +25,14 @@ def _normalize_mysql_scheme(url: str) -> str:
     u = url.strip()
     if u.startswith("mysql://") and not u.startswith("mysql+pymysql"):
         u = "mysql+pymysql://" + u[len("mysql://") :]
+    # PyMySQL does not accept options like `ssl-mode=REQUIRED` from some providers.
+    # Drop dashed query keys to avoid TypeError: unexpected keyword argument.
+    p = urlparse(u)
+    if p.query:
+        q = parse_qsl(p.query, keep_blank_values=True)
+        filtered = [(k, v) for (k, v) in q if "-" not in k]
+        if len(filtered) != len(q):
+            u = urlunparse((p.scheme, p.netloc, p.path, p.params, urlencode(filtered), p.fragment))
     return u
 
 

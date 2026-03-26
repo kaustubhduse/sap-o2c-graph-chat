@@ -5,6 +5,7 @@ Uses the nl-to-sql LangChain pipeline for query processing.
 import sys
 import os
 import logging
+import time
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,11 +36,25 @@ if os.getenv("LANGCHAIN_API_KEY"):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Connect to MySQL on startup."""
+    """Best-effort MySQL warm-up on startup (retry, do not crash service)."""
     logger.info("Connecting to MySQL via LangChain...")
-    db = get_db()
-    tables = db.get_usable_table_names()
-    logger.info(f"Database ready: {len(tables)} tables loaded")
+    last_err = None
+    for attempt in range(1, 6):
+        try:
+            db = get_db()
+            tables = db.get_usable_table_names()
+            logger.info(f"Database ready: {len(tables)} tables loaded")
+            last_err = None
+            break
+        except Exception as e:
+            last_err = e
+            logger.warning(f"MySQL warm-up failed (attempt {attempt}/5): {e}")
+            time.sleep(3)
+
+    if last_err:
+        logger.error(
+            "Starting API without DB warm-up; requests may fail until MySQL is reachable."
+        )
     yield
 
 

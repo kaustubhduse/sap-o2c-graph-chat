@@ -58,7 +58,10 @@ def main():
     logger.info(f"Connecting to MySQL at {DB_HOST}:{DB_PORT}...")
     
     # Connect without database first to create it
-    server_engine = create_engine(get_server_sqlalchemy_uri())
+    server_engine = create_engine(
+        get_server_sqlalchemy_uri(),
+        connect_args={"init_command": "SET SESSION sql_require_primary_key=0"},
+    )
     
     with server_engine.connect() as conn:
         # Use backticks for database name with hyphens
@@ -69,7 +72,10 @@ def main():
     server_engine.dispose()
 
     # Step 2: Connect to the target database
-    engine = create_engine(get_sqlalchemy_uri())
+    engine = create_engine(
+        get_sqlalchemy_uri(),
+        connect_args={"init_command": "SET SESSION sql_require_primary_key=0"},
+    )
 
     # Step 3: Load each CSV into a table
     csv_files = sorted(ENTITIES_DIR.glob("*.csv"))
