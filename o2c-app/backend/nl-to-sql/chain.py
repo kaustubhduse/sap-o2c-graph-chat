@@ -12,6 +12,7 @@ Architecture:
 import os
 import json
 import logging
+from typing import Iterator
 from dotenv import load_dotenv
 
 from langchain_groq import ChatGroq
@@ -221,6 +222,17 @@ def format_answer(question: str, sql: str, result: str) -> str:
     })
 
 
+def format_answer_stream(question: str, sql: str, result: str) -> Iterator[str]:
+    """Stream answer text chunks from the LLM."""
+    llm = get_llm()
+    chain = ANSWER_PROMPT | llm | StrOutputParser()
+    yield from chain.stream({
+        "question": question,
+        "query": sql,
+        "result": result,
+    })
+
+
 # ── Full Pipeline ────────────────────────────────────────────────────
 def process_query(question: str) -> dict:
     """
@@ -303,4 +315,100 @@ def process_query(question: str) -> dict:
         "highlighted_nodes": highlighted_nodes,
         "status": "success",
         "result_empty": result_empty,
+    }
+
+
+def process_query_stream(question: str):
+    """
+    Streaming variant of process_query.
+    Yields dict events:
+      - {"event":"status", ...}
+      - {"event":"sql", "sql": ...}
+      - {"event":"answer_chunk", "chunk": "..."}
+      - {"event":"final", "result": {...same payload as process_query...}}
+    """
+    yield {"event": "status", "stage": "guardrail"}
+    is_allowed, rejection_msg = check_guardrail(question)
+    if not is_allowed:
+        yield {
+            "event": "final",
+            "result": {
+                "answer": rejection_msg,
+                "sql": None,
+                "data": None,
+                "highlighted_nodes": None,
+                "status": "rejected",
+                "result_empty": None,
+            },
+        }
+        return
+
+    yield {"event": "status", "stage": "sql_generation"}
+    try:
+        sql, result_str = generate_and_execute(question)
+    except ValueError as e:
+        yield {
+            "event": "final",
+            "result": {
+                "answer": f"I understood your question but couldn't execute the query. Error: {e}",
+                "sql": None,
+                "data": None,
+                "highlighted_nodes": None,
+                "status": "error",
+                "result_empty": None,
+            },
+        }
+        return
+    except Exception as e:
+        logger.error(f"Pipeline error: {e}")
+        yield {
+            "event": "final",
+            "result": {
+                "answer": f"Sorry, something went wrong processing your question. Error: {e}",
+                "sql": None,
+                "data": None,
+                "highlighted_nodes": None,
+                "status": "error",
+                "result_empty": None,
+            },
+        }
+        return
+
+    result_empty = is_sql_result_empty(result_str)
+    yield {"event": "sql", "sql": sql}
+    yield {"event": "status", "stage": "answer_rephrasing"}
+
+    answer_chunks = []
+    try:
+        answer_input_result = "(no rows returned)" if result_empty else result_str
+        for chunk in format_answer_stream(question, sql, answer_input_result):
+            if not chunk:
+                continue
+            answer_chunks.append(chunk)
+            yield {"event": "answer_chunk", "chunk": chunk}
+        answer = "".join(answer_chunks).strip()
+        if not answer:
+            raise ValueError("Empty streamed answer")
+    except Exception as e:
+        logger.error(f"Answer streaming failed: {e}")
+        if result_empty:
+            answer = (
+                "The query ran successfully but returned no rows. "
+                "Try a narrower or different identifier and inspect View SQL if needed."
+            )
+        else:
+            answer = f"Query returned results:\n{result_str[:500]}"
+        yield {"event": "answer_chunk", "chunk": answer}
+
+    highlighted_nodes = extract_entity_ids(result_str, sql)
+    yield {
+        "event": "final",
+        "result": {
+            "answer": answer,
+            "sql": sql,
+            "data": result_str,
+            "highlighted_nodes": highlighted_nodes,
+            "status": "success",
+            "result_empty": result_empty,
+        },
     }

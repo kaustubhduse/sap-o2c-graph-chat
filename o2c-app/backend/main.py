@@ -6,9 +6,11 @@ import sys
 import os
 import logging
 import time
+import json
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 
@@ -19,7 +21,7 @@ if not (NL_TO_SQL_DIR / "chain.py").is_file():
 sys.path.insert(0, str(NL_TO_SQL_DIR))
 
 from db import get_db
-from chain import process_query
+from chain import process_query, process_query_stream
 
 logging.basicConfig(
     level=logging.INFO,
@@ -106,6 +108,22 @@ async def query(request: QueryRequest):
     result = process_query(request.message)
     logger.info(f"Status: {result['status']}")
     return result
+
+
+@app.post("/api/query/stream")
+async def query_stream(request: QueryRequest):
+    """Stream NL-to-SQL response chunks over Server-Sent Events."""
+    logger.info(f"Streaming query: {request.message}")
+
+    def event_generator():
+        for event in process_query_stream(request.message):
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
 
 
 @app.get("/")

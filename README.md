@@ -1,84 +1,193 @@
-# Dodge-AI — SAP Order-to-Cash (O2C) explorer
+# SAP O2C Graph + NL-to-SQL
 
-Monorepo for an O2C graph UI, natural-language-to-SQL chat (Groq + LangChain + MySQL), and supporting data pipelines.
+Frontend URL: [https://sap-o2c-graph-chat.vercel.app/](https://sap-o2c-graph-chat.vercel.app/)  
+Backend URL: [https://sap-o2c-graph-chat.onrender.com/](https://sap-o2c-graph-chat.onrender.com/)
 
-## Repository layout
+A lightweight Order-to-Cash explorer with:
+- interactive graph visualization
+- NL-to-SQL chat (LangChain + Groq)
+- MySQL-backed query execution
 
-| Path | Purpose |
-|------|--------|
-| `o2c-app/frontend` | React + Vite app (force graph, chat) |
-| `o2c-app/backend` | FastAPI API; NL→SQL pipeline lives in `o2c-app/backend/nl-to-sql/` |
-| `graph-builder` | Graph assets; `load_to_mysql.py` loads entity CSVs into MySQL (uses backend `db` module) |
-| `data-processing` | Preprocessing; entity CSVs under `data-processing/output/entities/` |
+## NL-to-SQL architecture
 
-There is **no** top-level `nl-to-sql` folder; the canonical copy is **`o2c-app/backend/nl-to-sql`**.
+![NL-to-SQL Architecture](o2c-app/frontend/public/image.png)
 
-## Prerequisites
+## Graph builder table schema
 
-- Python 3.11+ (recommended)
-- Node.js 18+ (for the frontend)
-- MySQL (local or hosted) with O2C tables populated
+The graph/data model used by `graph-builder`:
+
+![Table Schema](o2c-app/frontend/public/Tables-schema.svg)
+
+## Project structure
+
+- `o2c-app/frontend` - React + Vite UI (graph + chat)
+- `o2c-app/backend` - FastAPI API
+- `o2c-app/backend/nl-to-sql` - NL-to-SQL pipeline (canonical location)
+- `graph-builder` - loads CSV entities into MySQL
+- `data-processing` - preprocessing outputs used for graph/database
+
+## Key capabilities
+
+- Ask natural-language O2C questions and get SQL + answers.
+- Highlight graph nodes directly from query results and SQL entity extraction.
+- Expand neighborhoods for node-level investigation in the graph UI.
+- Use one backend service (`o2c-app/backend`) with embedded NL-to-SQL pipeline.
+
+## Optional things done
+
+- Natural language to SQL or graph query translation
+- Highlighting nodes referenced in responses
+- Streaming responses from the LLM
+
+## Architecture decisions and decision-making
+
+### 1) System architecture
+- **Decision:** Monorepo with separated concerns: `frontend` (UI), `backend` (API), `backend/nl-to-sql` (LLM pipeline), `graph-builder` (DB loading), `data-processing` (source artifacts).
+- **Why:** Keeps deployment simple (frontend + backend only) while preserving clear ownership of data prep and graph/db build steps.
+- **Trade-off:** Some path coupling across folders; mitigated by keeping canonical NL-to-SQL code under `o2c-app/backend/nl-to-sql`.
+
+### 2) Database choice (MySQL)
+- **Decision:** MySQL-compatible managed service (Aiven) with app connectivity via `MYSQL_URL`.
+- **Why:** Fits relational O2C data and LangChain SQL tooling; easy portability across local/cloud.
+- **Trade-off:** Provider-specific defaults (TLS, primary-key enforcement, connection params) require loader/runtime handling.
+
+### 3) LLM prompting strategy
+- **Decision:** Multi-stage prompting instead of one-shot SQL generation:
+  1. guardrail classification  
+  2. relevant table selection  
+  3. few-shot SQL generation  
+  4. SQL execution + retry/fix loop  
+  5. answer rephrasing  
+  6. entity extraction for graph highlights
+- **Why:** Improves SQL quality, lowers hallucination risk, and gives better debuggability (`View SQL`, stage-wise logs).
+- **Trade-off:** More moving parts than one prompt, but better control and error recovery.
+
+### 4) Guardrails and safety
+- **Decision:** Two-layer guardrail (`keyword` + `LLM`) plus explicit off-topic rejection message.
+- **Why:** Fast cheap filter for obvious off-topic inputs, with LLM fallback for ambiguous phrasing.
+- **Trade-off:** Can still over-reject/under-reject edge cases; handled via transparent messaging and SQL visibility.
+
+### 5) API response strategy
+- **Decision:** Keep both standard and streaming modes:
+  - `POST /api/query` (single JSON response)
+  - `POST /api/query/stream` (SSE incremental chunks)
+- **Why:** Streaming improves UX for long generations while preserving compatibility with non-stream clients.
+- **Trade-off:** Slightly more frontend/backend complexity to maintain both paths.
 
 ## Environment variables
 
-Copy examples and fill in secrets (do **not** commit `.env` files).
+### Backend (`o2c-app/backend/.env`)
+- `GROQ_API_KEY`, `GROQ_MODEL`
+- `MYSQL_URL` (preferred) or `DB_USER/DB_PASSWORD/DB_HOST/DB_PORT/DB_NAME`
+- `FRONTEND_URL` (CORS origins, comma-separated)
 
-**Backend** — `o2c-app/backend/.env`:
+### Frontend (`o2c-app/frontend/.env`)
+- `VITE_API_URL=https://<your-backend-domain>`
 
-- `GROQ_API_KEY`, `GROQ_MODEL` — Groq LLM
-- `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME` — MySQL
-- Optional: `LANGCHAIN_API_KEY`, `LANGCHAIN_TRACING_V2`, `LANGCHAIN_PROJECT` — LangSmith
-- `FRONTEND_URL` — comma-separated CORS origins (e.g. `https://your-app.vercel.app,http://localhost:5173`). Set the same on **Render**; `.env` is not deployed from Git.
+## API endpoints
 
-The same `DB_*` values are read when running `graph-builder/load_to_mysql.py` (after loading `o2c-app/backend/.env`).
+- `GET /` - basic service status
+- `GET /api/health` - DB connectivity and table count
+- `POST /api/query` - NL question to SQL+answer pipeline
 
-**Frontend** — `o2c-app/frontend/.env` (copy from `.env.example`):
+## Run locally
 
-- `VITE_API_URL` — backend base URL with **no** trailing slash (e.g. `https://sap-o2c-graph-chat.onrender.com` or `http://localhost:8000` for local dev).
+### 0) First-time setup (create/load MySQL tables)
+Run this before using the chat API for the first time:
+```bash
+cd graph-builder
+python -m venv venv
+# Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python load_to_mysql.py
+```
 
-On **Vercel** (or similar), set the same `VITE_API_URL` in the project environment variables; `.env` is gitignored and is not deployed from the repo by default.
-
-## Local development
-
-### Backend
-
+### 1) Backend
 ```bash
 cd o2c-app/backend
 python -m venv venv
 # Windows: venv\Scripts\activate
-# macOS/Linux: source venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Health check: `http://localhost:8000/api/health`
-
-### Frontend
-
+### 2) Frontend
 ```bash
 cd o2c-app/frontend
 npm install
 npm run dev
 ```
 
-### Load CSVs into MySQL (optional)
-
-From repo root, with `o2c-app/backend/.env` configured and entity CSVs present:
-
+### 3) Re-load MySQL tables (when source CSVs change)
+If you regenerate data in `data-processing/output/entities`, run:
 ```bash
 cd graph-builder
-python -m venv venv && venv\Scripts\activate   # adjust for your OS
-pip install -r requirements.txt
+# Activate existing venv, then:
 python load_to_mysql.py
 ```
 
-## Deployment (summary)
+## Deploy (quick)
 
-- **Backend:** e.g. [Render](https://render.com) — root directory `o2c-app/backend`, build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, set env vars on the host (no `.env` in Git).
-- **Frontend:** e.g. [Vercel](https://vercel.com) — project root `o2c-app/frontend`, set production API URL to your deployed backend.
-- **MySQL:** not provided by Render; use a managed MySQL service (e.g. [Railway](https://railway.app)) and set `DB_*` to match.
+- **Backend (Render)**
+  - Root: `o2c-app/backend`
+  - Build: `pip install -r requirements.txt`
+  - Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+  - Set env vars in Render dashboard
 
-## Git and secrets
+- **Frontend (Vercel)**
+  - Root: `o2c-app/frontend`
+  - Set `VITE_API_URL` to your Render backend URL
 
-- This repo uses **`.gitignore` files** at the root and under major subfolders to exclude `venv/`, `node_modules/`, `.env`, caches, and editor noise.
-- **Rotate any API keys or passwords** that were ever committed or shared before making the repository public.
+## Sample outputs
+
+### Query example 1
+![Query Example 1](o2c-app/frontend/public/query-1.png)
+
+### Query example 2
+![Query Example 2](o2c-app/frontend/public/query-2.png)
+
+### Query example 3
+![Query Example 3](o2c-app/frontend/public/query-3.png)
+
+## AI coding session logs
+
+We keep AI-assisted development logs for traceability and handover quality.
+
+- `ai-session-logs/cursor/`
+- `ai-session-logs/claude-code/`
+- `ai-session-logs/copilot/`
+- `ai-session-logs/summary.md`
+
+Each session log should include:
+- date/time
+- tool name
+- objective
+- key prompts
+- decisions made
+- files changed
+- result and next steps
+
+### Automatic export from `.jsonl` transcripts
+
+You can generate redacted markdown summaries automatically:
+
+```bash
+python scripts/export_chat_logs.py \
+  --input-dir "C:/Users/Kaustubh Duse/.cursor/projects/c-Users-Kaustubh-Duse-OneDrive-Desktop-Dodge-AI/agent-transcripts" \
+  --output-dir "ai-session-logs/cursor" \
+  --max-files 20
+```
+
+Optional flags:
+- `--overwrite` to rewrite existing `.md` files
+- `--max-files 0` to process all transcripts
+
+Built-in redaction removes common API keys/tokens, DB URLs, and password-like assignments.  
+Always review generated logs before commit.
+
+## Notes
+
+- Keep `.env` out of Git.
+- `graph-builder/load_to_mysql.py` recreates tables; if your MySQL service enforces primary keys, keep the post-load PK step enabled.
+- If frontend shows `localhost:8000` errors in production, set `VITE_API_URL` in Vercel and redeploy.
+- Recommended order: **(1) load tables with graph-builder -> (2) start/deploy backend -> (3) run frontend**.

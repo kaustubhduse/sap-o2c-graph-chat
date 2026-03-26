@@ -82,3 +82,8 @@ logs/
 # Optional: large generated artifacts (uncomment if you do not track them in Git)
 # data-processing/output/
 # graph-builder/output/
+
+# Scripts (local automation)
+scripts/
+
+ai-session-logs/raw/

@@ -14,6 +14,35 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [highlightedNodes, setHighlightedNodes] = useState([]);
 
+  const readSseEvents = async (response, onEvent) => {
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('Streaming reader unavailable');
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() || '';
+
+      for (const rawEvent of events) {
+        const dataLines = rawEvent
+          .split('\n')
+          .filter((line) => line.startsWith('data:'))
+          .map((line) => line.slice(5).trim());
+        if (!dataLines.length) continue;
+        try {
+          const payload = JSON.parse(dataLines.join(''));
+          onEvent(payload);
+        } catch (e) {
+          console.warn('Failed to parse stream event:', e);
+        }
+      }
+    }
+  };
+
   const sendMessage = async (text) => {
     if (!text.trim()) return;
 
@@ -28,34 +57,90 @@ export function useChat() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/query`, {
+      const assistantId = (Date.now() + 1).toString();
+      const baseAssistant = {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        sql: null,
+        data: null,
+        highlightedNodes: [],
+        status: 'streaming',
+        resultEmpty: null,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, baseAssistant]);
+
+      let streamedContent = '';
+      let latestSql = null;
+      let finalResult = null;
+
+      const streamResponse = await fetch(`${API_BASE_URL}/api/query/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })
       });
 
-      const data = await response.json();
+      if (streamResponse.ok && streamResponse.body) {
+        await readSseEvents(streamResponse, (event) => {
+          if (event.event === 'sql' && event.sql) {
+            latestSql = event.sql;
+            setMessages(prev =>
+              prev.map(m => (m.id === assistantId ? { ...m, sql: latestSql } : m))
+            );
+            return;
+          }
+
+          if (event.event === 'answer_chunk' && typeof event.chunk === 'string') {
+            streamedContent += event.chunk;
+            setMessages(prev =>
+              prev.map(m =>
+                m.id === assistantId ? { ...m, content: streamedContent, sql: latestSql } : m
+              )
+            );
+            return;
+          }
+
+          if (event.event === 'final' && event.result) {
+            finalResult = event.result;
+          }
+        });
+      } else {
+        // Fallback to non-stream endpoint
+        const response = await fetch(`${API_BASE_URL}/api/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text })
+        });
+        finalResult = await response.json();
+      }
+
+      if (!finalResult) {
+        throw new Error('No final result from stream');
+      }
 
       const graphHighlights =
-        data.status === 'success'
-          ? augmentHighlightsFromSql(data.sql || '', data.highlighted_nodes || [])
+        finalResult.status === 'success'
+          ? augmentHighlightsFromSql(finalResult.sql || '', finalResult.highlighted_nodes || [])
           : [];
 
-      const assistantMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.answer,
-        sql: data.sql,
-        data: data.data,
-        highlightedNodes: graphHighlights,
-        status: data.status,
-        resultEmpty: data.result_empty,
-        timestamp: new Date().toISOString()
-      };
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === assistantId
+            ? {
+                ...m,
+                content: finalResult.answer || streamedContent || m.content,
+                sql: finalResult.sql,
+                data: finalResult.data,
+                highlightedNodes: graphHighlights,
+                status: finalResult.status,
+                resultEmpty: finalResult.result_empty,
+              }
+            : m
+        )
+      );
 
-      setMessages(prev => [...prev, assistantMessage]);
-
-      if (data.status === 'success') {
+      if (finalResult.status === 'success') {
         setHighlightedNodes(graphHighlights);
       }
     } catch (error) {
