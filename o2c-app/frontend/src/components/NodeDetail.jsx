@@ -106,9 +106,12 @@ export default function NodeDetail({
   onClose,
   expandedNodeId,
 }) {
+  const panelClass =
+    'w-[min(100vw-1.5rem,22rem)] max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden flex flex-col max-h-[calc(100vh-1.5rem)]';
+
   if (!nodes.length) {
     return (
-      <div className="w-[min(100vw-2rem,22rem)] sm:w-96 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden flex flex-col max-h-[70vh]">
+      <div className={panelClass}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white">
           <h1 className="text-base font-semibold text-slate-900">Query result</h1>
           <button
@@ -141,7 +144,7 @@ export default function NodeDetail({
   const showExpand = !isQuery && nodes.length === 1;
 
   return (
-    <div className="w-[min(100vw-2rem,22rem)] sm:w-96 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden flex flex-col max-h-[70vh]">
+    <div className={panelClass}>
       <div className="flex-shrink-0 flex items-start justify-between gap-2 px-4 py-3 border-b border-slate-200 bg-white">
         <div className="min-w-0">
           <h1 className="text-base font-semibold text-slate-900 leading-tight">

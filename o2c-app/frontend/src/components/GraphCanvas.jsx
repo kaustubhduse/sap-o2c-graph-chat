@@ -91,7 +91,6 @@ export default function GraphCanvas({
   textColor = '#1e293b'
 }) {
   const fgRef = useRef();
-  const didInitialFitRef = useRef(false);
 
   // Fast lookup for highlighting
   const highlightedSet = useMemo(() => {
@@ -222,22 +221,16 @@ export default function GraphCanvas({
       
       // Re-heat and let physics settle
       fg.d3ReheatSimulation();
-
-      // On first load, force a full desktop view.
-      if (!didInitialFitRef.current) {
-        fg.zoomToFit(0, 220);
-        setTimeout(() => fgRef.current?.zoomToFit(600, 220), 1200);
-        setTimeout(() => fgRef.current?.zoomToFit(800, 220), 2500);
-        didInitialFitRef.current = true;
-      }
     }
   }, [processedData.nodes.length, clusters, orbitPositions]);
 
-  // Keep full-view framing on viewport changes (unless query highlights are active).
+  // Responsive fit by current screen size (unless query highlights are active).
   useEffect(() => {
     if (!fgRef.current || !processedData.nodes.length) return;
     if (highlightedNodes.length > 0) return;
-    const t = setTimeout(() => fgRef.current?.zoomToFit(500, 220), 250);
+    const minDim = Math.min(width || 0, height || 0);
+    const padding = Math.max(80, Math.min(220, Math.round(minDim * 0.14)));
+    const t = setTimeout(() => fgRef.current?.zoomToFit(500, padding), 250);
     return () => clearTimeout(t);
   }, [width, height, processedData.nodes.length, highlightedNodes.length]);
 
