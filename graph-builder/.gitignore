@@ -1,0 +1,8 @@
+# Monorepo: see /.gitignore at repository root for full rules.
+venv/
+.venv/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]

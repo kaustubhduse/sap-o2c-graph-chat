@@ -1,0 +1,9 @@
+businessPartner,customer,businessPartnerCategory,businessPartnerFullName,businessPartnerGrouping,businessPartnerName,correspondenceLanguage,createdByUser,creationDate,firstName,formOfAddress,industry,lastChangeDate,lastName,organizationBpName1,organizationBpName2,businessPartnerIsBlocked,isMarkedForArchiving,creationTime_hours,creationTime_minutes,creationTime_seconds,creationTime_formatted
+310000108,310000108,2,"Cardenas, Parker and Avila",Y101,"Cardenas, Parker and Avila",,USER750,2024-04-16 00:00:00+00:00,,0003,,2025-06-27 00:00:00+00:00,,"Cardenas, Parker and Avila",,False,False,13,36,43,13:36:43
+310000109,310000109,2,Bradley-Kelley,Y101,Bradley-Kelley,,USER750,2024-04-16 00:00:00+00:00,,0003,,2025-11-06 00:00:00+00:00,,Bradley-Kelley,,False,False,13,36,43,13:36:43
+320000082,320000082,2,Nguyen-Davis,Y102,Nguyen-Davis,,USER108,2024-11-20 00:00:00+00:00,,0003,,2025-09-10 00:00:00+00:00,,Nguyen-Davis,,True,True,13,32,1,13:32:01
+320000083,320000083,2,"Nelson, Fitzpatrick and Jordan",Y102,"Nelson, Fitzpatrick and Jordan",,USER108,2024-11-20 00:00:00+00:00,,0003,,2025-09-11 00:00:00+00:00,,Torres-Williams,Torres-Williams,True,True,13,32,1,13:32:01
+320000085,320000085,2,Hawkins Ltd,Y102,Hawkins Ltd,,USER108,2024-11-20 00:00:00+00:00,,0003,,2025-09-11 00:00:00+00:00,,Hawkins Ltd,,True,True,13,32,2,13:32:02
+320000088,320000088,2,Flores-Simmons,Y102,Flores-Simmons,,USER108,2024-11-20 00:00:00+00:00,,0003,,2025-09-11 00:00:00+00:00,,Flores-Simmons,,True,True,13,32,2,13:32:02
+320000107,320000107,2,"Henderson, Garner and Graves",Y102,"Henderson, Garner and Graves",,USER108,2024-11-20 00:00:00+00:00,,0003,,2025-09-11 00:00:00+00:00,,"Henderson, Garner and Graves",,True,True,13,32,6,13:32:06
+320000108,320000108,2,Melton Group,Y102,Melton Group,,USER108,2024-11-20 00:00:00+00:00,,0003,,2025-09-11 00:00:00+00:00,,Melton Group,,True,True,13,32,6,13:32:06

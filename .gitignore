@@ -1,0 +1,84 @@
+# Secrets and local env (never commit)
+.env
+.env.*
+!.env.example
+!.env*.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+.venv/
+env/
+
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Vite / tooling caches
+.vite/
+.cache/
+.parcel-cache/
+.turbo/
+coverage/
+htmlcov/
+
+# Tests / typecheck
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local editor history (Cursor / similar)
+.history/
+
+# Logs
+logs/
+*.log
+
+# Optional: large generated artifacts (uncomment if you do not track them in Git)
+# data-processing/output/
+# graph-builder/output/
