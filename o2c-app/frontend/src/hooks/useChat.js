@@ -28,7 +28,7 @@ export function useChat() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/query', {
+      const response = await fetch(`${API_BASE_URL}/api/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })

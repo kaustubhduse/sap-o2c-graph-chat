@@ -225,9 +225,9 @@ export default function GraphCanvas({
 
       // On first load, force a full desktop view.
       if (!didInitialFitRef.current) {
-        fg.zoomToFit(0, 220);
-        setTimeout(() => fgRef.current?.zoomToFit(600, 220), 1200);
-        setTimeout(() => fgRef.current?.zoomToFit(800, 220), 2500);
+        fg.zoomToFit(0, 80);
+        setTimeout(() => fgRef.current?.zoomToFit(500, 80), 1200);
+        setTimeout(() => fgRef.current?.zoomToFit(700, 80), 2500);
         didInitialFitRef.current = true;
       }
     }
@@ -237,7 +237,7 @@ export default function GraphCanvas({
   useEffect(() => {
     if (!fgRef.current || !processedData.nodes.length) return;
     if (highlightedNodes.length > 0) return;
-    const t = setTimeout(() => fgRef.current?.zoomToFit(500, 220), 250);
+    const t = setTimeout(() => fgRef.current?.zoomToFit(400, 80), 250);
     return () => clearTimeout(t);
   }, [width, height, processedData.nodes.length, highlightedNodes.length]);
 
@@ -422,3 +422,4 @@ export default function GraphCanvas({
     />
   );
 }
+

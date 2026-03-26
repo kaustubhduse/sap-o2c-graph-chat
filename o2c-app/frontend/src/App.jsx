@@ -34,7 +34,7 @@ export default function App() {
 
   const [detailContext, setDetailContext] = useState(null);
   const lastHighlightSigRef = useRef('');
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOverlayVisible, setIsOverlayVisible] = useState(false); // Hidden by default to match clean UI
   const [dimensions, setDimensions] = useState({
     width: window.innerWidth,
