@@ -31,7 +31,11 @@ Copy examples and fill in secrets (do **not** commit `.env` files).
 
 The same `DB_*` values are read when running `graph-builder/load_to_mysql.py` (after loading `o2c-app/backend/.env`).
 
-**Frontend** — point API calls at your backend (e.g. `VITE_API_URL` if you add that pattern; default local dev is often `http://localhost:8000`).
+**Frontend** — `o2c-app/frontend/.env` (copy from `.env.example`):
+
+- `VITE_API_URL` — backend base URL with **no** trailing slash (e.g. `https://sap-o2c-graph-chat.onrender.com` or `http://localhost:8000` for local dev).
+
+On **Vercel** (or similar), set the same `VITE_API_URL` in the project environment variables; `.env` is gitignored and is not deployed from the repo by default.
 
 ## Local development
 

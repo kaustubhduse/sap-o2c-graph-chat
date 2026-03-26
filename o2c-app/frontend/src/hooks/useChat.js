@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { augmentHighlightsFromSql } from '../utils/augmentHighlightsFromSql';
+import { API_BASE_URL } from '../config';
 
 export function useChat() {
   const [messages, setMessages] = useState([
@@ -62,7 +63,7 @@ export function useChat() {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered a network error. Please ensure the backend server is running on port 8000.',
+        content: `Sorry, I encountered a network error. Check that the API is reachable (${API_BASE_URL}).`,
         status: 'error',
         timestamp: new Date().toISOString()
       }]);
