@@ -50,9 +50,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+def _cors_allowed_origins() -> list[str]:
+    """Comma-separated FRONTEND_URL / CORS_ORIGINS; trailing slashes stripped. Empty → allow all."""
+    raw = (os.getenv("CORS_ORIGINS") or os.getenv("FRONTEND_URL") or "").strip()
+    if not raw:
+        return ["*"]
+    return [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
+
+
+_cors_origins = _cors_allowed_origins()
+logger.info(f"CORS allow_origins: {_cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -28,6 +28,7 @@ Copy examples and fill in secrets (do **not** commit `.env` files).
 - `GROQ_API_KEY`, `GROQ_MODEL` — Groq LLM
 - `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME` — MySQL
 - Optional: `LANGCHAIN_API_KEY`, `LANGCHAIN_TRACING_V2`, `LANGCHAIN_PROJECT` — LangSmith
+- `FRONTEND_URL` — comma-separated CORS origins (e.g. `https://your-app.vercel.app,http://localhost:5173`). Set the same on **Render**; `.env` is not deployed from Git.
 
 The same `DB_*` values are read when running `graph-builder/load_to_mysql.py` (after loading `o2c-app/backend/.env`).
 
