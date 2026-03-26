@@ -270,7 +270,7 @@ export default function GraphCanvas({
     const paintQueryBlack = isHighlighted || onPathChain;
 
     // Hub: Blue dot (larger), Entities: Smaller colorful dots
-    const size = isHub ? 8 : (NODE_COLORS[node.type] || 4);
+    const size = isHub ? 8 : (NODE_SIZES[node.type] || 4);
     
     // Hub is always bright BLUE, entities get their type color (vibrant and visible)
     let color = isHub ? '#2563eb' : (NODE_COLORS[node.type] || '#94a3b8');
